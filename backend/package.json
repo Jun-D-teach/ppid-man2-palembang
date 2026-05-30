@@ -1,0 +1,24 @@
+{
+  "name": "ppid-man2-palembang",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix frontend\" \"npm run dev:backend\"",
+    "dev:backend": "nodemon backend/server.js",
+    "dev:full": "concurrently \"npm run dev\" \"npm run dev:backend\"",
+    "build": "npm run build --prefix frontend",
+    "start": "node backend/server.js"
+  },
+ "dependencies": {
+  "express": "^4.18.2",
+  "cors": "^2.8.5",
+  "multer": "^1.4.5",
+  "mysql2": "^3.4.0",
+  "dotenv": "^16.1.4",
+  "jsonwebtoken": "^9.0.0",
+  "bcryptjs": "^2.4.3"
+},
+  "devDependencies": {
+    "nodemon": "^3.1.14",
+    "vite": "^5.4.21"
+  }
+}
