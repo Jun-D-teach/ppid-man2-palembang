@@ -82,6 +82,7 @@ const Home = () => {
   const [selectedMenuPage, setSelectedMenuPage] = useState(null);
   const [searchDokumen, setSearchDokumen] = useState("");
   const [showProsedur, setShowProsedur] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navigate = useNavigate();
 
@@ -188,6 +189,7 @@ const Home = () => {
     }
 
     setSelectedMenuPage(page);
+    setMobileMenuOpen(false);
   };
 
   const handleProsedurButton = () => {
@@ -300,7 +302,53 @@ const Home = () => {
               </li>
             ))}
           </ul>
+
+          <button
+            type="button"
+            className="xl:hidden flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-200 text-emerald-800 hover:bg-emerald-50"
+            aria-expanded={mobileMenuOpen}
+            aria-label={mobileMenuOpen ? "Tutup menu" : "Buka menu"}
+            onClick={() => setMobileMenuOpen((open) => !open)}
+          >
+            <span className="text-xl leading-none">{mobileMenuOpen ? "✕" : "☰"}</span>
+          </button>
         </div>
+
+        {mobileMenuOpen && (
+          <div className="xl:hidden border-t border-emerald-100 bg-white px-4 py-3 shadow-inner">
+            <ul className="flex flex-col gap-1">
+              {navigation.map((nav) => (
+                <li key={nav.name}>
+                  {nav.href ? (
+                    <Link
+                      to={nav.href}
+                      className="block rounded-lg px-4 py-3 text-sm font-black text-slate-700 hover:bg-emerald-50 hover:text-emerald-700"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      {nav.name}
+                    </Link>
+                  ) : (
+                    <>
+                      <p className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-emerald-700">
+                        {nav.name}
+                      </p>
+                      {nav.submenu?.map((sub) => (
+                        <a
+                          key={sub.id || sub.slug || sub.menu_label}
+                          href={`#${sub.slug}`}
+                          onClick={(e) => handleMenuPageClick(e, sub)}
+                          className="block rounded-lg px-6 py-2.5 text-sm font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-800"
+                        >
+                          {sub.menu_label}
+                        </a>
+                      ))}
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </nav>
 
       <header className="relative min-h-[500px] md:h-[650px] bg-emerald-950 overflow-hidden flex items-center pb-20 md:pb-40">
