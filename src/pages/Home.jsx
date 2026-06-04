@@ -26,17 +26,17 @@ const defaultMenuPages = [
   { parent_menu: "INFORMASI PUBLIK", menu_label: "Informasi Setiap Saat", slug: "informasi-setiap-saat", judul: "Informasi Setiap Saat", isi: "Klik untuk melihat daftar Informasi Setiap Saat.", position: 3, berkas_list: [] },
   { parent_menu: "INFORMASI PUBLIK", menu_label: "Informasi Dikecualikan", slug: "informasi-dikecualikan", judul: "Informasi Dikecualikan", isi: "Klik untuk melihat daftar Informasi Dikecualikan.", position: 4, berkas_list: [] },
 
-  { parent_menu: "LAYANAN", menu_label: "Prosedur Permohonan", slug: "prosedur-permohonan", judul: "Prosedur Permohonan", isi: "Konten Prosedur Permohonan belum diisi oleh admin.", position: 1, berkas_list: [] },
-  { parent_menu: "LAYANAN", menu_label: "Prosedur Keberatan", slug: "prosedur-keberatan", judul: "Prosedur Keberatan", isi: "Konten Prosedur Keberatan belum diisi oleh admin.", position: 2, berkas_list: [] },
-  { parent_menu: "LAYANAN", menu_label: "Biaya Layanan", slug: "biaya-layanan", judul: "Biaya Layanan", isi: "Konten Biaya Layanan belum diisi oleh admin.", position: 3, berkas_list: [] },
-  { parent_menu: "LAYANAN", menu_label: "Hak & Tata Cara", slug: "hak-tata-cara", judul: "Hak & Tata Cara", isi: "Konten Hak & Tata Cara belum diisi oleh admin.", position: 4, berkas_list: [] },
+  { parent_menu: "LAYANAN INFORMASI", menu_label: "Prosedur Permohonan", slug: "prosedur-permohonan", judul: "Prosedur Permohonan", isi: "Konten Prosedur Permohonan belum diisi oleh admin.", position: 1, berkas_list: [] },
+  { parent_menu: "LAYANAN INFORMASI", menu_label: "Prosedur Keberatan", slug: "prosedur-keberatan", judul: "Prosedur Keberatan", isi: "Konten Prosedur Keberatan belum diisi oleh admin.", position: 2, berkas_list: [] },
+  { parent_menu: "LAYANAN INFORMASI", menu_label: "Biaya Layanan", slug: "biaya-layanan", judul: "Biaya Layanan", isi: "Konten Biaya Layanan belum diisi oleh admin.", position: 3, berkas_list: [] },
+  { parent_menu: "LAYANAN INFORMASI", menu_label: "Hak & Tata Cara", slug: "hak-tata-cara", judul: "Hak & Tata Cara", isi: "Konten Hak & Tata Cara belum diisi oleh admin.", position: 4, berkas_list: [] },
 
   { parent_menu: "LAPORAN", menu_label: "Laporan Tahunan", slug: "laporan-tahunan", judul: "Laporan Tahunan", isi: "Konten Laporan Tahunan belum diisi oleh admin.", position: 1, berkas_list: [] },
   { parent_menu: "LAPORAN", menu_label: "Laporan Statistik", slug: "laporan-statistik", judul: "Laporan Statistik", isi: "Konten Laporan Statistik belum diisi oleh admin.", position: 2, berkas_list: [] },
   { parent_menu: "LAPORAN", menu_label: "Laporan Akses", slug: "laporan-akses", judul: "Laporan Akses", isi: "Konten Laporan Akses belum diisi oleh admin.", position: 3, berkas_list: [] },
 ];
 
-const parentOrder = ["PROFIL", "REGULASI", "INFORMASI PUBLIK", "LAYANAN", "LAPORAN"];
+const parentOrder = ["PROFIL", "REGULASI", "INFORMASI PUBLIK", "LAYANAN INFORMASI", "LAPORAN"];
 
 const getFileFormat = (fileName = "") => {
   if (!fileName.includes(".")) return "FILE";

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { api, getUploadUrl } from "../api";
 
-const parentMenuOptions = ["PROFIL", "REGULASI", "INFORMASI PUBLIK", "LAYANAN", "LAPORAN"];
+const parentMenuOptions = ["PROFIL", "REGULASI", "INFORMASI PUBLIK", "LAYANAN INFORMASI", "LAPORAN"];
 
 const initialForm = {
   id: null,
