@@ -6,7 +6,7 @@ const mysql = require("mysql2/promise");
 const fs = require("fs");
 const dotenv = require("dotenv");
 const jwt = require("jsonwebtoken");
-const bcrypt = require('bcryptjs');
+const bcrypt = require("bcryptjs");
 
 dotenv.config({ path: path.join(__dirname, "../.env") });
 dotenv.config({ path: path.join(__dirname, ".env"), override: false });
@@ -14,14 +14,16 @@ dotenv.config({ path: path.join(__dirname, ".env"), override: false });
 const app = express();
 
 const corsOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(",").map((origin) => origin.trim()).filter(Boolean)
+  ? process.env.CORS_ORIGIN.split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean)
   : true;
 
 app.use(
   cors({
     origin: corsOrigins,
     credentials: true,
-  })
+  }),
 );
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -56,20 +58,23 @@ const storage = multer.diskStorage({
   },
 });
 
-const allowedUploadMimeTypes = (process.env.ALLOWED_UPLOAD_MIME_TYPES || [
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.ms-powerpoint",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  "text/plain",
-  "text/csv",
-].join(","))
+const allowedUploadMimeTypes = (
+  process.env.ALLOWED_UPLOAD_MIME_TYPES ||
+  [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "text/plain",
+    "text/csv",
+  ].join(",")
+)
   .split(",")
   .map((type) => type.trim())
   .filter(Boolean);
@@ -132,7 +137,7 @@ const createToken = (user) =>
       email: user.email,
     },
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN }
+    { expiresIn: JWT_EXPIRES_IN },
   );
 
 const requireAuth = (req, res, next) => {
@@ -140,21 +145,27 @@ const requireAuth = (req, res, next) => {
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
   if (!token) {
-    return res.status(401).json({ message: "Sesi login tidak ditemukan. Silakan login ulang." });
+    return res
+      .status(401)
+      .json({ message: "Sesi login tidak ditemukan. Silakan login ulang." });
   }
 
   try {
     req.user = jwt.verify(token, JWT_SECRET);
     return next();
   } catch (error) {
-    return res.status(401).json({ message: "Sesi login sudah tidak valid. Silakan login ulang." });
+    return res
+      .status(401)
+      .json({ message: "Sesi login sudah tidak valid. Silakan login ulang." });
   }
 };
 
 const requireAdmin = (req, res, next) => {
   requireAuth(req, res, () => {
     if (req.user?.role !== "admin") {
-      return res.status(403).json({ message: "Akses ditolak. Hanya admin yang boleh mengakses fitur ini." });
+      return res.status(403).json({
+        message: "Akses ditolak. Hanya admin yang boleh mengakses fitur ini.",
+      });
     }
     return next();
   });
@@ -162,10 +173,15 @@ const requireAdmin = (req, res, next) => {
 
 const requireOwnerOrAdmin = (req, res, next) => {
   requireAuth(req, res, () => {
-    if (req.user?.role === "admin" || Number(req.user?.id) === Number(req.params.user_id)) {
+    if (
+      req.user?.role === "admin" ||
+      Number(req.user?.id) === Number(req.params.user_id)
+    ) {
       return next();
     }
-    return res.status(403).json({ message: "Akses ditolak untuk data pengguna lain." });
+    return res
+      .status(403)
+      .json({ message: "Akses ditolak untuk data pengguna lain." });
   });
 };
 
@@ -177,103 +193,125 @@ const deleteUploadedFile = (fileName) => {
   }
 };
 
-app.get("/api/health", asyncHandler(async (req, res) => {
-  await db.query("SELECT 1");
-  res.json({ status: "ok", message: "API PPID aktif" });
-}));
+app.get(
+  "/api/health",
+  asyncHandler(async (req, res) => {
+    await db.query("SELECT 1");
+    res.json({ status: "ok", message: "API PPID aktif" });
+  }),
+);
 
 /* =========================
    AUTH
 ========================= */
 
-app.post("/api/register", asyncHandler(async (req, res) => {
-  const { nama_lengkap, nik, no_hp, email, password } = req.body;
+app.post(
+  "/api/register",
+  asyncHandler(async (req, res) => {
+    const { nama_lengkap, nik, no_hp, email, password } = req.body;
 
-  if (!nama_lengkap || !nik || !email || !password) {
-    return res.status(400).json({
-      message: "Nama lengkap, NIK, email, dan password wajib diisi",
-    });
-  }
+    if (!nama_lengkap || !nik || !email || !password) {
+      return res.status(400).json({
+        message: "Nama lengkap, NIK, email, dan password wajib diisi",
+      });
+    }
 
-  const [existing] = await db.query(
-    "SELECT id FROM users WHERE email = ? OR nik = ? LIMIT 1",
-    [email, nik]
-  );
+    const [existing] = await db.query(
+      "SELECT id FROM users WHERE email = ? OR nik = ? LIMIT 1",
+      [email, nik],
+    );
 
-  if (existing.length > 0) {
-    return res.status(409).json({
-      message: "Email atau NIK sudah terdaftar",
-    });
-  }
+    if (existing.length > 0) {
+      return res.status(409).json({
+        message: "Email atau NIK sudah terdaftar",
+      });
+    }
 
-  const hashedPassword = await hashPassword(password);
+    const hashedPassword = await hashPassword(password);
 
-  await db.query(
-    `
+    await db.query(
+      `
       INSERT INTO users
       (nama_lengkap, nik, no_hp, email, password, role)
       VALUES (?, ?, ?, ?, ?, 'user')
     `,
-    [nama_lengkap, nik, no_hp || "", email, hashedPassword]
-  );
+      [nama_lengkap, nik, no_hp || "", email, hashedPassword],
+    );
 
-  res.status(201).json({ message: "Pendaftaran berhasil" });
-}));
+    res.status(201).json({ message: "Pendaftaran berhasil" });
+  }),
+);
 
-app.post("/api/login", asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+app.post(
+  "/api/login",
+  asyncHandler(async (req, res) => {
+    const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ message: "Email dan password wajib diisi" });
-  }
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ message: "Email dan password wajib diisi" });
+    }
 
-  const [rows] = await db.query(
-    `
+    const [rows] = await db.query(
+      `
       SELECT id, nama_lengkap, nik, no_hp, email, password, role, created_at
       FROM users
       WHERE email = ?
       LIMIT 1
     `,
-    [email]
-  );
+      [email],
+    );
 
-  if (rows.length === 0) {
-    return res.status(401).json({ message: "Email atau password salah" });
-  }
+    if (rows.length === 0) {
+      return res.status(401).json({ message: "Email atau password salah" });
+    }
 
-  const user = rows[0];
-  const isValid = await verifyPassword(password, user.password);
+    const user = rows[0];
+    const isValid = await verifyPassword(password, user.password);
 
-  if (!isValid) {
-    return res.status(401).json({ message: "Email atau password salah" });
-  }
+    if (!isValid) {
+      return res.status(401).json({ message: "Email atau password salah" });
+    }
 
-  // Upgrade otomatis akun lama: plaintext -> bcrypt setelah login berhasil.
-  if (!isBcryptHash(user.password)) {
-    const upgradedHash = await hashPassword(password);
-    await db.query("UPDATE users SET password = ? WHERE id = ?", [upgradedHash, user.id]);
-  }
+    // Upgrade otomatis akun lama: plaintext -> bcrypt setelah login berhasil.
+    if (!isBcryptHash(user.password)) {
+      const upgradedHash = await hashPassword(password);
+      await db.query("UPDATE users SET password = ? WHERE id = ?", [
+        upgradedHash,
+        user.id,
+      ]);
+    }
 
-  const safeUser = publicUser(user);
-  const token = createToken(safeUser);
+    const safeUser = publicUser(user);
+    const token = createToken(safeUser);
 
-  res.json({ message: "Login berhasil", user: safeUser, token });
-}));
+    res.json({ message: "Login berhasil", user: safeUser, token });
+  }),
+);
 
 /* =========================
    BERANDA
 ========================= */
 
-app.get("/api/beranda", asyncHandler(async (req, res) => {
-  const [rows] = await db.query("SELECT * FROM informasi_beranda WHERE id = 1 LIMIT 1");
-  res.json(rows[0] || {});
-}));
+app.get(
+  "/api/beranda",
+  asyncHandler(async (req, res) => {
+    const [rows] = await db.query(
+      "SELECT * FROM informasi_beranda WHERE id = 1 LIMIT 1",
+    );
+    res.json(rows[0] || {});
+  }),
+);
 
-app.put("/api/admin/beranda", requireAdmin, asyncHandler(async (req, res) => {
-  const data = req.body;
+app.put(
+  "/api/admin/beranda",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const data = req.body;
 
-  await db.query(
-    `
+    await db.query(
+      `
       INSERT INTO informasi_beranda
       (
         id,
@@ -307,178 +345,231 @@ app.put("/api/admin/beranda", requireAdmin, asyncHandler(async (req, res) => {
         prosedur_judul = VALUES(prosedur_judul),
         prosedur_isi = VALUES(prosedur_isi)
     `,
-    [
-      1,
-      data.nama_instansi || "",
-      data.logo_url || "",
-      data.kontak_telepon || "",
-      data.kontak_email || "",
-      data.alamat || "",
-      data.banner_badge || "",
-      data.banner_judul || "",
-      data.banner_highlight || "",
-      data.banner_subjudul || "",
-      data.banner_gambar || "",
-      data.footer_deskripsi || "",
-      data.prosedur_judul || "",
-      data.prosedur_isi || "",
-    ]
-  );
+      [
+        1,
+        data.nama_instansi || "",
+        data.logo_url || "",
+        data.kontak_telepon || "",
+        data.kontak_email || "",
+        data.alamat || "",
+        data.banner_badge || "",
+        data.banner_judul || "",
+        data.banner_highlight || "",
+        data.banner_subjudul || "",
+        data.banner_gambar || "",
+        data.footer_deskripsi || "",
+        data.prosedur_judul || "",
+        data.prosedur_isi || "",
+      ],
+    );
 
-  res.json({ message: "Beranda berhasil diperbarui" });
-}));
+    res.json({ message: "Beranda berhasil diperbarui" });
+  }),
+);
 
 /* =========================
    INFORMASI PUBLIK
 ========================= */
 
-app.get("/api/informasi-publik", asyncHandler(async (req, res) => {
-  const [informasi] = await db.query(
-    "SELECT * FROM informasi_publik ORDER BY created_at DESC"
-  );
+app.get(
+  "/api/informasi-publik",
+  asyncHandler(async (req, res) => {
+    const [informasi] = await db.query(
+      "SELECT * FROM informasi_publik ORDER BY created_at DESC",
+    );
 
-  const [berkas] = await db.query(
-    "SELECT * FROM informasi_publik_berkas ORDER BY id ASC"
-  );
+    const [berkas] = await db.query(
+      "SELECT * FROM informasi_publik_berkas ORDER BY id ASC",
+    );
 
-  const result = informasi.map((item) => ({
-    ...item,
-    berkas_list: berkas
-      .filter((file) => Number(file.informasi_id) === Number(item.id))
-      .map((file) => ({
-        id: file.id,
-        nama_file: file.nama_file,
-        nama_asli: file.nama_asli,
-        mime_type: file.mime_type,
-        ukuran: file.ukuran,
-      })),
-  }));
+    const result = informasi.map((item) => ({
+      ...item,
+      berkas_list: berkas
+        .filter((file) => Number(file.informasi_id) === Number(item.id))
+        .map((file) => ({
+          id: file.id,
+          nama_file: file.nama_file,
+          nama_asli: file.nama_asli,
+          mime_type: file.mime_type,
+          ukuran: file.ukuran,
+        })),
+    }));
 
-  res.json(result);
-}));
+    res.json(result);
+  }),
+);
 
-app.post("/api/admin/informasi-publik", requireAdmin, upload.array("berkas"), asyncHandler(async (req, res) => {
-  const { kategori, judul, deskripsi, tahun, status_publish } = req.body;
+app.post(
+  "/api/admin/informasi-publik",
+  requireAdmin,
+  upload.array("berkas"),
+  asyncHandler(async (req, res) => {
+    const { kategori, judul, deskripsi, tahun, status_publish } = req.body;
 
-  if (!kategori || !judul) {
-    return res.status(400).json({ message: "Kategori dan judul wajib diisi" });
-  }
+    if (!kategori || !judul) {
+      return res
+        .status(400)
+        .json({ message: "Kategori dan judul wajib diisi" });
+    }
 
-  const [result] = await db.query(
-    `
+    const [result] = await db.query(
+      `
       INSERT INTO informasi_publik
       (kategori, judul, deskripsi, tahun, status_publish)
       VALUES (?, ?, ?, ?, ?)
     `,
-    [kategori, judul, deskripsi || "", tahun || "", status_publish || "Tampil"]
-  );
+      [
+        kategori,
+        judul,
+        deskripsi || "",
+        tahun || "",
+        status_publish || "Tampil",
+      ],
+    );
 
-  const informasiId = result.insertId;
+    const informasiId = result.insertId;
 
-  if (req.files?.length) {
-    for (const file of req.files) {
-      await db.query(
-        `
+    if (req.files?.length) {
+      for (const file of req.files) {
+        await db.query(
+          `
           INSERT INTO informasi_publik_berkas
           (informasi_id, nama_file, nama_asli, mime_type, ukuran)
           VALUES (?, ?, ?, ?, ?)
         `,
-        [informasiId, file.filename, file.originalname, file.mimetype, file.size]
-      );
+          [
+            informasiId,
+            file.filename,
+            file.originalname,
+            file.mimetype,
+            file.size,
+          ],
+        );
+      }
     }
-  }
 
-  res.status(201).json({ message: "Informasi publik berhasil ditambahkan" });
-}));
+    res.status(201).json({ message: "Informasi publik berhasil ditambahkan" });
+  }),
+);
 
-app.put("/api/admin/informasi-publik/:id", requireAdmin, upload.array("berkas"), asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { kategori, judul, deskripsi, tahun, status_publish } = req.body;
+app.put(
+  "/api/admin/informasi-publik/:id",
+  requireAdmin,
+  upload.array("berkas"),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { kategori, judul, deskripsi, tahun, status_publish } = req.body;
 
-  await db.query(
-    `
+    await db.query(
+      `
       UPDATE informasi_publik
       SET kategori = ?, judul = ?, deskripsi = ?, tahun = ?, status_publish = ?
       WHERE id = ?
     `,
-    [kategori, judul, deskripsi || "", tahun || "", status_publish || "Tampil", id]
-  );
+      [
+        kategori,
+        judul,
+        deskripsi || "",
+        tahun || "",
+        status_publish || "Tampil",
+        id,
+      ],
+    );
 
-  if (req.files?.length) {
-    for (const file of req.files) {
-      await db.query(
-        `
+    if (req.files?.length) {
+      for (const file of req.files) {
+        await db.query(
+          `
           INSERT INTO informasi_publik_berkas
           (informasi_id, nama_file, nama_asli, mime_type, ukuran)
           VALUES (?, ?, ?, ?, ?)
         `,
-        [id, file.filename, file.originalname, file.mimetype, file.size]
-      );
+          [id, file.filename, file.originalname, file.mimetype, file.size],
+        );
+      }
     }
-  }
 
-  res.json({ message: "Informasi publik berhasil diperbarui" });
-}));
+    res.json({ message: "Informasi publik berhasil diperbarui" });
+  }),
+);
 
-app.delete("/api/admin/informasi-publik/:id", requireAdmin, asyncHandler(async (req, res) => {
-  const { id } = req.params;
+app.delete(
+  "/api/admin/informasi-publik/:id",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
 
-  const [files] = await db.query(
-    "SELECT nama_file FROM informasi_publik_berkas WHERE informasi_id = ?",
-    [id]
-  );
+    const [files] = await db.query(
+      "SELECT nama_file FROM informasi_publik_berkas WHERE informasi_id = ?",
+      [id],
+    );
 
-  await db.query("DELETE FROM informasi_publik WHERE id = ?", [id]);
-  files.forEach((file) => deleteUploadedFile(file.nama_file));
+    await db.query("DELETE FROM informasi_publik WHERE id = ?", [id]);
+    files.forEach((file) => deleteUploadedFile(file.nama_file));
 
-  res.json({ message: "Informasi publik berhasil dihapus" });
-}));
+    res.json({ message: "Informasi publik berhasil dihapus" });
+  }),
+);
 
 /* =========================
    PERMOHONAN INFORMASI
 ========================= */
 
-app.post("/api/permohonan", requireAuth, asyncHandler(async (req, res) => {
-  const { user_id, subjek, tujuan_informasi, cara_memperoleh } = req.body;
-  const pemohonId = req.user.role === "admin" && user_id ? user_id : req.user.id;
+app.post(
+  "/api/permohonan",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { user_id, subjek, tujuan_informasi, cara_memperoleh } = req.body;
+    const pemohonId =
+      req.user.role === "admin" && user_id ? user_id : req.user.id;
 
-  if (!pemohonId || !subjek || !tujuan_informasi) {
-    return res.status(400).json({
-      message: "User, subjek, dan tujuan informasi wajib diisi",
-    });
-  }
+    if (!pemohonId || !subjek || !tujuan_informasi) {
+      return res.status(400).json({
+        message: "User, subjek, dan tujuan informasi wajib diisi",
+      });
+    }
 
-  const [result] = await db.query(
-    `
+    const [result] = await db.query(
+      `
       INSERT INTO permohonan
       (user_id, subjek, tujuan_informasi, cara_memperoleh, status)
       VALUES (?, ?, ?, ?, 'Pending')
     `,
-    [pemohonId, subjek, tujuan_informasi, cara_memperoleh || "Email"]
-  );
+      [pemohonId, subjek, tujuan_informasi, cara_memperoleh || "Email"],
+    );
 
-  res.status(201).json({ message: "Permohonan berhasil dikirim", id: result.insertId });
-}));
+    res
+      .status(201)
+      .json({ message: "Permohonan berhasil dikirim", id: result.insertId });
+  }),
+);
 
-app.get("/api/permohonan/:user_id", requireOwnerOrAdmin, asyncHandler(async (req, res) => {
-  const { user_id } = req.params;
+app.get(
+  "/api/permohonan/:user_id",
+  requireOwnerOrAdmin,
+  asyncHandler(async (req, res) => {
+    const { user_id } = req.params;
 
-  const [rows] = await db.query(
-    `
+    const [rows] = await db.query(
+      `
       SELECT *
       FROM permohonan
       WHERE user_id = ?
       ORDER BY tanggal_pengajuan DESC
     `,
-    [user_id]
-  );
+      [user_id],
+    );
 
-  res.json(rows);
-}));
+    res.json(rows);
+  }),
+);
 
-app.get("/api/admin/permohonan", requireAdmin, asyncHandler(async (req, res) => {
-  const [rows] = await db.query(
-    `
+app.get(
+  "/api/admin/permohonan",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const [rows] = await db.query(
+      `
       SELECT
         p.*,
         u.nama_lengkap,
@@ -488,42 +579,51 @@ app.get("/api/admin/permohonan", requireAdmin, asyncHandler(async (req, res) => 
       FROM permohonan p
       LEFT JOIN users u ON p.user_id = u.id
       ORDER BY p.tanggal_pengajuan DESC
-    `
-  );
+    `,
+    );
 
-  res.json(rows);
-}));
+    res.json(rows);
+  }),
+);
 
-app.put("/api/permohonan/:id", requireAdmin, asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { status, estimasi, catatan_admin } = req.body;
+app.put(
+  "/api/permohonan/:id",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { status, estimasi, catatan_admin } = req.body;
 
-  await db.query(
-    `
+    await db.query(
+      `
       UPDATE permohonan
       SET status = ?, estimasi = ?, catatan_admin = ?
       WHERE id = ?
     `,
-    [status || "Diproses", estimasi || null, catatan_admin || null, id]
-  );
-
-  res.json({ message: "Status permohonan berhasil diperbarui" });
-}));
-
-app.put("/api/permohonan/upload/:id", requireAdmin, upload.single("berkas"), asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { pesan_admin, hapus_berkas } = req.body;
-
-  if (hapus_berkas === "true") {
-    const [rows] = await db.query(
-      "SELECT berkas_balasan FROM permohonan WHERE id = ? LIMIT 1",
-      [id]
+      [status || "Diproses", estimasi || null, catatan_admin || null, id],
     );
 
-    deleteUploadedFile(rows[0]?.berkas_balasan);
+    res.json({ message: "Status permohonan berhasil diperbarui" });
+  }),
+);
 
-    await db.query(
-      `
+app.put(
+  "/api/permohonan/upload/:id",
+  requireAdmin,
+  upload.single("berkas"),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { pesan_admin, hapus_berkas } = req.body;
+
+    if (hapus_berkas === "true") {
+      const [rows] = await db.query(
+        "SELECT berkas_balasan FROM permohonan WHERE id = ? LIMIT 1",
+        [id],
+      );
+
+      deleteUploadedFile(rows[0]?.berkas_balasan);
+
+      await db.query(
+        `
         UPDATE permohonan
         SET berkas_balasan = NULL,
             pesan_admin = NULL,
@@ -531,25 +631,25 @@ app.put("/api/permohonan/upload/:id", requireAdmin, upload.single("berkas"), asy
             status = 'Diproses'
         WHERE id = ?
       `,
-      [id]
-    );
+        [id],
+      );
 
-    return res.json({ message: "Jawaban admin berhasil dihapus" });
-  }
+      return res.json({ message: "Jawaban admin berhasil dihapus" });
+    }
 
-  const uploadedFile = req.file ? req.file.filename : null;
+    const uploadedFile = req.file ? req.file.filename : null;
 
-  if (uploadedFile) {
-    const [rows] = await db.query(
-      "SELECT berkas_balasan FROM permohonan WHERE id = ? LIMIT 1",
-      [id]
-    );
+    if (uploadedFile) {
+      const [rows] = await db.query(
+        "SELECT berkas_balasan FROM permohonan WHERE id = ? LIMIT 1",
+        [id],
+      );
 
-    deleteUploadedFile(rows[0]?.berkas_balasan);
-  }
+      deleteUploadedFile(rows[0]?.berkas_balasan);
+    }
 
-  await db.query(
-    `
+    await db.query(
+      `
       UPDATE permohonan
       SET berkas_balasan = COALESCE(?, berkas_balasan),
           pesan_admin = ?,
@@ -557,87 +657,252 @@ app.put("/api/permohonan/upload/:id", requireAdmin, upload.single("berkas"), asy
           status = 'Selesai'
       WHERE id = ?
     `,
-    [uploadedFile, pesan_admin || "", id]
-  );
+      [uploadedFile, pesan_admin || "", id],
+    );
 
-  res.json({ message: "Jawaban admin berhasil dikirim" });
-}));
+    res.json({ message: "Jawaban admin berhasil dikirim" });
+  }),
+);
 
 /* =========================
    NAVBAR CMS SEDERHANA
 ========================= */
 
-app.get("/api/admin/navbar", asyncHandler(async (req, res) => {
-  const [rows] = await db.query("SELECT * FROM navbar_items ORDER BY position ASC, id ASC");
-  res.json(rows);
-}));
+app.get(
+  "/api/admin/navbar",
+  asyncHandler(async (req, res) => {
+    const [rows] = await db.query(
+      "SELECT * FROM navbar_items ORDER BY position ASC, id ASC",
+    );
+    res.json(rows);
+  }),
+);
 
-app.post("/api/admin/navbar", requireAdmin, asyncHandler(async (req, res) => {
-  const { name, href, submenu, position } = req.body;
+app.post(
+  "/api/admin/navbar",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { name, href, submenu, position } = req.body;
 
-  if (!name || !href) {
-    return res.status(400).json({ message: "Nama dan link menu wajib diisi" });
-  }
+    if (!name || !href) {
+      return res
+        .status(400)
+        .json({ message: "Nama dan link menu wajib diisi" });
+    }
 
-  const normalizedSubmenu = Array.isArray(submenu) ? JSON.stringify(submenu) : submenu || "[]";
+    const normalizedSubmenu = Array.isArray(submenu)
+      ? JSON.stringify(submenu)
+      : submenu || "[]";
 
-  const [result] = await db.query(
-    "INSERT INTO navbar_items (name, href, submenu, position) VALUES (?, ?, ?, ?)",
-    [name, href, normalizedSubmenu, position || 1]
-  );
+    const [result] = await db.query(
+      "INSERT INTO navbar_items (name, href, submenu, position) VALUES (?, ?, ?, ?)",
+      [name, href, normalizedSubmenu, position || 1],
+    );
 
-  res.status(201).json({ message: "Menu berhasil ditambahkan", id: result.insertId });
-}));
+    res
+      .status(201)
+      .json({ message: "Menu berhasil ditambahkan", id: result.insertId });
+  }),
+);
 
-app.put("/api/admin/navbar/:id", requireAdmin, asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { name, href, submenu, position } = req.body;
-  const normalizedSubmenu = Array.isArray(submenu) ? JSON.stringify(submenu) : submenu || "[]";
+app.put(
+  "/api/admin/navbar/:id",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { name, href, submenu, position } = req.body;
+    const normalizedSubmenu = Array.isArray(submenu)
+      ? JSON.stringify(submenu)
+      : submenu || "[]";
 
-  await db.query(
-    "UPDATE navbar_items SET name = ?, href = ?, submenu = ?, position = ? WHERE id = ?",
-    [name, href, normalizedSubmenu, position || 1, id]
-  );
+    await db.query(
+      "UPDATE navbar_items SET name = ?, href = ?, submenu = ?, position = ? WHERE id = ?",
+      [name, href, normalizedSubmenu, position || 1, id],
+    );
 
-  res.json({ message: "Menu berhasil diperbarui" });
-}));
+    res.json({ message: "Menu berhasil diperbarui" });
+  }),
+);
 
-app.delete("/api/admin/navbar/:id", requireAdmin, asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  await db.query("DELETE FROM navbar_items WHERE id = ?", [id]);
-  res.json({ message: "Menu berhasil dihapus" });
-}));
-
+app.delete(
+  "/api/admin/navbar/:id",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    await db.query("DELETE FROM navbar_items WHERE id = ?", [id]);
+    res.json({ message: "Menu berhasil dihapus" });
+  }),
+);
 
 /* =========================
    CMS MENU WEBSITE
 ========================= */
 
 const defaultMenuPages = [
-  { parent_menu: "PROFIL", menu_label: "Profil PPID", slug: "profil-ppid", judul: "Profil PPID", isi: "Isi profil PPID dapat diedit melalui Panel Admin > Atur Menu Website.", position: 1 },
-  { parent_menu: "PROFIL", menu_label: "Visi & Misi", slug: "visi-misi", judul: "Visi & Misi", isi: "Visi dan misi PPID dapat diedit melalui Panel Admin > Atur Menu Website.", position: 2 },
-  { parent_menu: "PROFIL", menu_label: "Tugas & Fungsi", slug: "tugas-fungsi", judul: "Tugas & Fungsi", isi: "Tugas dan fungsi PPID dapat diedit melalui Panel Admin > Atur Menu Website.", position: 3 },
-  { parent_menu: "PROFIL", menu_label: "Struktur Organisasi", slug: "struktur-organisasi", judul: "Struktur Organisasi", isi: "Struktur organisasi dapat diedit dan dilengkapi berkas melalui Panel Admin.", position: 4 },
-  { parent_menu: "PROFIL", menu_label: "Maklumat Pelayanan", slug: "maklumat-pelayanan", judul: "Maklumat Pelayanan", isi: "Maklumat pelayanan dapat diedit melalui Panel Admin.", position: 5 },
+  {
+    parent_menu: "PROFIL",
+    menu_label: "Profil PPID",
+    slug: "profil-ppid",
+    judul: "Profil PPID",
+    isi: "Isi profil PPID dapat diedit melalui Panel Admin > Atur Menu Website.",
+    position: 1,
+  },
+  {
+    parent_menu: "PROFIL",
+    menu_label: "Visi & Misi",
+    slug: "visi-misi",
+    judul: "Visi & Misi",
+    isi: "Visi dan misi PPID dapat diedit melalui Panel Admin > Atur Menu Website.",
+    position: 2,
+  },
+  {
+    parent_menu: "PROFIL",
+    menu_label: "Tugas & Fungsi",
+    slug: "tugas-fungsi",
+    judul: "Tugas & Fungsi",
+    isi: "Tugas dan fungsi PPID dapat diedit melalui Panel Admin > Atur Menu Website.",
+    position: 3,
+  },
+  {
+    parent_menu: "PROFIL",
+    menu_label: "Struktur Organisasi",
+    slug: "struktur-organisasi",
+    judul: "Struktur Organisasi",
+    isi: "Struktur organisasi dapat diedit dan dilengkapi berkas melalui Panel Admin.",
+    position: 4,
+  },
+  {
+    parent_menu: "PROFIL",
+    menu_label: "Maklumat Pelayanan",
+    slug: "maklumat-pelayanan",
+    judul: "Maklumat Pelayanan",
+    isi: "Maklumat pelayanan dapat diedit melalui Panel Admin.",
+    position: 5,
+  },
 
-  { parent_menu: "REGULASI", menu_label: "UU KIP", slug: "uu-kip", judul: "UU KIP", isi: "Konten regulasi UU KIP dapat diedit dan dilengkapi berkas melalui Panel Admin.", position: 1 },
-  { parent_menu: "REGULASI", menu_label: "Peraturan Menteri", slug: "peraturan-menteri", judul: "Peraturan Menteri", isi: "Konten peraturan menteri dapat diedit dan dilengkapi berkas melalui Panel Admin.", position: 2 },
-  { parent_menu: "REGULASI", menu_label: "SOP PPID", slug: "sop-ppid", judul: "SOP PPID", isi: "SOP PPID dapat diedit dan dilengkapi berkas melalui Panel Admin.", position: 3 },
-  { parent_menu: "REGULASI", menu_label: "SK PPID", slug: "sk-ppid", judul: "SK PPID", isi: "SK PPID dapat diedit dan dilengkapi berkas melalui Panel Admin.", position: 4 },
+  {
+    parent_menu: "REGULASI",
+    menu_label: "UU KIP",
+    slug: "uu-kip",
+    judul: "UU KIP",
+    isi: "Konten regulasi UU KIP dapat diedit dan dilengkapi berkas melalui Panel Admin.",
+    position: 1,
+  },
+  {
+    parent_menu: "REGULASI",
+    menu_label: "Peraturan Menteri",
+    slug: "peraturan-menteri",
+    judul: "Peraturan Menteri",
+    isi: "Konten peraturan menteri dapat diedit dan dilengkapi berkas melalui Panel Admin.",
+    position: 2,
+  },
+  {
+    parent_menu: "REGULASI",
+    menu_label: "SOP PPID",
+    slug: "sop-ppid",
+    judul: "SOP PPID",
+    isi: "SOP PPID dapat diedit dan dilengkapi berkas melalui Panel Admin.",
+    position: 3,
+  },
+  {
+    parent_menu: "REGULASI",
+    menu_label: "SK PPID",
+    slug: "sk-ppid",
+    judul: "SK PPID",
+    isi: "SK PPID dapat diedit dan dilengkapi berkas melalui Panel Admin.",
+    position: 4,
+  },
 
-  { parent_menu: "INFORMASI PUBLIK", menu_label: "Informasi Berkala", slug: "informasi-berkala", judul: "Informasi Berkala", isi: "Klik menu ini untuk melihat daftar dokumen informasi berkala pada tabel informasi publik.", position: 1 },
-  { parent_menu: "INFORMASI PUBLIK", menu_label: "Informasi Serta Merta", slug: "informasi-serta-merta", judul: "Informasi Serta Merta", isi: "Klik menu ini untuk melihat daftar dokumen informasi serta merta pada tabel informasi publik.", position: 2 },
-  { parent_menu: "INFORMASI PUBLIK", menu_label: "Informasi Setiap Saat", slug: "informasi-setiap-saat", judul: "Informasi Setiap Saat", isi: "Klik menu ini untuk melihat daftar dokumen informasi setiap saat pada tabel informasi publik.", position: 3 },
-  { parent_menu: "INFORMASI PUBLIK", menu_label: "Informasi Dikecualikan", slug: "informasi-dikecualikan", judul: "Informasi Dikecualikan", isi: "Klik menu ini untuk melihat daftar dokumen informasi dikecualikan pada tabel informasi publik.", position: 4 },
+  {
+    parent_menu: "INFORMASI PUBLIK",
+    menu_label: "Informasi Berkala",
+    slug: "informasi-berkala",
+    judul: "Informasi Berkala",
+    isi: "Klik menu ini untuk melihat daftar dokumen informasi berkala pada tabel informasi publik.",
+    position: 1,
+  },
+  {
+    parent_menu: "INFORMASI PUBLIK",
+    menu_label: "Informasi Serta Merta",
+    slug: "informasi-serta-merta",
+    judul: "Informasi Serta Merta",
+    isi: "Klik menu ini untuk melihat daftar dokumen informasi serta merta pada tabel informasi publik.",
+    position: 2,
+  },
+  {
+    parent_menu: "INFORMASI PUBLIK",
+    menu_label: "Informasi Setiap Saat",
+    slug: "informasi-setiap-saat",
+    judul: "Informasi Setiap Saat",
+    isi: "Klik menu ini untuk melihat daftar dokumen informasi setiap saat pada tabel informasi publik.",
+    position: 3,
+  },
+  {
+    parent_menu: "INFORMASI PUBLIK",
+    menu_label: "Informasi Dikecualikan",
+    slug: "informasi-dikecualikan",
+    judul: "Informasi Dikecualikan",
+    isi: "Klik menu ini untuk melihat daftar dokumen informasi dikecualikan pada tabel informasi publik.",
+    position: 4,
+  },
 
-  { parent_menu: "LAYANAN", menu_label: "Prosedur Permohonan", slug: "prosedur-permohonan", judul: "Prosedur Permohonan", isi: "Prosedur permohonan informasi dapat diedit melalui Panel Admin > Atur Menu Website.", position: 1 },
-  { parent_menu: "LAYANAN", menu_label: "Prosedur Keberatan", slug: "prosedur-keberatan", judul: "Prosedur Keberatan", isi: "Prosedur keberatan dapat diedit melalui Panel Admin.", position: 2 },
-  { parent_menu: "LAYANAN", menu_label: "Biaya Layanan", slug: "biaya-layanan", judul: "Biaya Layanan", isi: "Informasi biaya layanan dapat diedit melalui Panel Admin.", position: 3 },
-  { parent_menu: "LAYANAN", menu_label: "Hak & Tata Cara", slug: "hak-tata-cara", judul: "Hak & Tata Cara", isi: "Hak dan tata cara memperoleh informasi dapat diedit melalui Panel Admin.", position: 4 },
+  {
+    parent_menu: "LAYANAN",
+    menu_label: "Prosedur Permohonan",
+    slug: "prosedur-permohonan",
+    judul: "Prosedur Permohonan",
+    isi: "Prosedur permohonan informasi dapat diedit melalui Panel Admin > Atur Menu Website.",
+    position: 1,
+  },
+  {
+    parent_menu: "LAYANAN",
+    menu_label: "Prosedur Keberatan",
+    slug: "prosedur-keberatan",
+    judul: "Prosedur Keberatan",
+    isi: "Prosedur keberatan dapat diedit melalui Panel Admin.",
+    position: 2,
+  },
+  {
+    parent_menu: "LAYANAN",
+    menu_label: "Biaya Layanan",
+    slug: "biaya-layanan",
+    judul: "Biaya Layanan",
+    isi: "Informasi biaya layanan dapat diedit melalui Panel Admin.",
+    position: 3,
+  },
+  {
+    parent_menu: "LAYANAN",
+    menu_label: "Hak & Tata Cara",
+    slug: "hak-tata-cara",
+    judul: "Hak & Tata Cara",
+    isi: "Hak dan tata cara memperoleh informasi dapat diedit melalui Panel Admin.",
+    position: 4,
+  },
 
-  { parent_menu: "LAPORAN", menu_label: "Laporan Tahunan", slug: "laporan-tahunan", judul: "Laporan Tahunan", isi: "Laporan tahunan dapat diedit dan dilengkapi berkas melalui Panel Admin.", position: 1 },
-  { parent_menu: "LAPORAN", menu_label: "Laporan Statistik", slug: "laporan-statistik", judul: "Laporan Statistik", isi: "Laporan statistik dapat diedit dan dilengkapi berkas melalui Panel Admin.", position: 2 },
-  { parent_menu: "LAPORAN", menu_label: "Laporan Akses", slug: "laporan-akses", judul: "Laporan Akses", isi: "Laporan akses informasi dapat diedit dan dilengkapi berkas melalui Panel Admin.", position: 3 },
+  {
+    parent_menu: "LAPORAN",
+    menu_label: "Laporan Tahunan",
+    slug: "laporan-tahunan",
+    judul: "Laporan Tahunan",
+    isi: "Laporan tahunan dapat diedit dan dilengkapi berkas melalui Panel Admin.",
+    position: 1,
+  },
+  {
+    parent_menu: "LAPORAN",
+    menu_label: "Laporan Statistik",
+    slug: "laporan-statistik",
+    judul: "Laporan Statistik",
+    isi: "Laporan statistik dapat diedit dan dilengkapi berkas melalui Panel Admin.",
+    position: 2,
+  },
+  {
+    parent_menu: "LAPORAN",
+    menu_label: "Laporan Akses",
+    slug: "laporan-akses",
+    judul: "Laporan Akses",
+    isi: "Laporan akses informasi dapat diedit dan dilengkapi berkas melalui Panel Admin.",
+    position: 3,
+  },
 ];
 
 const slugify = (value = "") =>
@@ -689,7 +954,14 @@ const ensureMenuCmsTables = async () => {
           (parent_menu, menu_label, slug, judul, isi, status_publish, position, is_builtin)
           VALUES (?, ?, ?, ?, ?, 'Tampil', ?, 1)
         `,
-        [item.parent_menu, item.menu_label, item.slug, item.judul, item.isi, item.position]
+        [
+          item.parent_menu,
+          item.menu_label,
+          item.slug,
+          item.judul,
+          item.isi,
+          item.position,
+        ],
       );
     }
   }
@@ -701,7 +973,7 @@ const attachMenuPageFiles = async (pages) => {
   const pageIds = pages.map((item) => item.id);
   const [files] = await db.query(
     `SELECT * FROM menu_page_files WHERE page_id IN (?) ORDER BY id ASC`,
-    [pageIds]
+    [pageIds],
   );
 
   return pages.map((page) => ({
@@ -720,183 +992,259 @@ const attachMenuPageFiles = async (pages) => {
   }));
 };
 
-app.get("/api/menu-pages", asyncHandler(async (req, res) => {
-  const includeHidden = req.query.includeHidden === "true" && req.user?.role === "admin";
-  const where = includeHidden ? "" : "WHERE status_publish = 'Tampil'";
-  const [pages] = await db.query(
-    `SELECT * FROM menu_pages ${where} ORDER BY FIELD(parent_menu, 'PROFIL', 'REGULASI', 'INFORMASI PUBLIK', 'LAYANAN', 'LAPORAN'), position ASC, id ASC`
-  );
+app.get(
+  "/api/menu-pages",
+  asyncHandler(async (req, res) => {
+    const includeHidden =
+      req.query.includeHidden === "true" && req.user?.role === "admin";
+    const where = includeHidden ? "" : "WHERE status_publish = 'Tampil'";
+    const [pages] = await db.query(
+      `SELECT * FROM menu_pages ${where} ORDER BY FIELD(parent_menu, 'PROFIL', 'REGULASI', 'INFORMASI PUBLIK', 'LAYANAN', 'LAPORAN'), position ASC, id ASC`,
+    );
 
-  res.json(await attachMenuPageFiles(pages));
-}));
+    res.json(await attachMenuPageFiles(pages));
+  }),
+);
 
-app.get("/api/menu-pages/:slug", asyncHandler(async (req, res) => {
-  const { slug } = req.params;
-  const [pages] = await db.query(
-    "SELECT * FROM menu_pages WHERE slug = ? AND status_publish = 'Tampil' LIMIT 1",
-    [slug]
-  );
+app.get(
+  "/api/menu-pages/:slug",
+  asyncHandler(async (req, res) => {
+    const { slug } = req.params;
+    const [pages] = await db.query(
+      "SELECT * FROM menu_pages WHERE slug = ? AND status_publish = 'Tampil' LIMIT 1",
+      [slug],
+    );
 
-  if (pages.length === 0) {
-    return res.status(404).json({ message: "Halaman menu tidak ditemukan" });
-  }
+    if (pages.length === 0) {
+      return res.status(404).json({ message: "Halaman menu tidak ditemukan" });
+    }
 
-  const result = await attachMenuPageFiles(pages);
-  res.json(result[0]);
-}));
+    const result = await attachMenuPageFiles(pages);
+    res.json(result[0]);
+  }),
+);
 
-app.get("/api/admin/menu-pages", requireAdmin, asyncHandler(async (req, res) => {
-  const [pages] = await db.query(
-    `SELECT * FROM menu_pages ORDER BY FIELD(parent_menu, 'PROFIL', 'REGULASI', 'INFORMASI PUBLIK', 'LAYANAN', 'LAPORAN'), position ASC, id ASC`
-  );
+app.get(
+  "/api/admin/menu-pages",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const [pages] = await db.query(
+      `SELECT * FROM menu_pages ORDER BY FIELD(parent_menu, 'PROFIL', 'REGULASI', 'INFORMASI PUBLIK', 'LAYANAN', 'LAPORAN'), position ASC, id ASC`,
+    );
 
-  res.json(await attachMenuPageFiles(pages));
-}));
+    res.json(await attachMenuPageFiles(pages));
+  }),
+);
 
-app.post("/api/admin/menu-pages", requireAdmin, upload.array("berkas"), asyncHandler(async (req, res) => {
-  const { parent_menu, menu_label, slug, judul, isi, status_publish, position } = req.body;
+app.post(
+  "/api/admin/menu-pages",
+  requireAdmin,
+  upload.array("berkas"),
+  asyncHandler(async (req, res) => {
+    const {
+      parent_menu,
+      menu_label,
+      slug,
+      judul,
+      isi,
+      status_publish,
+      position,
+    } = req.body;
 
-  if (!parent_menu || !menu_label || !judul) {
-    return res.status(400).json({ message: "Menu utama, nama submenu, dan judul halaman wajib diisi" });
-  }
+    if (!parent_menu || !menu_label || !judul) {
+      return res.status(400).json({
+        message: "Menu utama, nama submenu, dan judul halaman wajib diisi",
+      });
+    }
 
-  const finalSlug = slugify(slug || menu_label || judul);
-  if (!finalSlug) {
-    return res.status(400).json({ message: "Slug/link menu tidak valid" });
-  }
+    const finalSlug = slugify(slug || menu_label || judul);
+    if (!finalSlug) {
+      return res.status(400).json({ message: "Slug/link menu tidak valid" });
+    }
 
-  const [result] = await db.query(
-    `
+    const [result] = await db.query(
+      `
       INSERT INTO menu_pages
       (parent_menu, menu_label, slug, judul, isi, status_publish, position, is_builtin)
       VALUES (?, ?, ?, ?, ?, ?, ?, 0)
     `,
-    [
-      String(parent_menu).toUpperCase(),
+      [
+        String(parent_menu).toUpperCase(),
+        menu_label,
+        finalSlug,
+        judul,
+        isi || "",
+        status_publish || "Tampil",
+        Number(position || 1),
+      ],
+    );
+
+    const pageId = result.insertId;
+
+    if (req.files?.length) {
+      for (const file of req.files) {
+        await db.query(
+          `INSERT INTO menu_pages
+    (parent_menu, menu_label, slug, judul, isi, status_publish, position, is_builtin)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
+          [
+            String(parent_menu).toUpperCase(),
+            menu_label,
+            slug,
+            judul,
+            isi || "", // <-- pastikan isi dikirim dari pop-up
+            status_publish || "Tampil",
+            Number(position || 1),
+          ],
+        );
+      }
+    }
+
+    res
+      .status(201)
+      .json({ message: "Halaman menu berhasil ditambahkan", id: pageId });
+  }),
+);
+
+app.put(
+  "/api/admin/menu-pages/:id",
+  requireAdmin,
+  upload.array("berkas"),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const {
+      parent_menu,
       menu_label,
-      finalSlug,
+      slug,
       judul,
-      isi || "",
-      status_publish || "Tampil",
-      Number(position || 1),
-    ]
-  );
+      isi,
+      status_publish,
+      position,
+    } = req.body;
 
-  const pageId = result.insertId;
+    if (!parent_menu || !menu_label || !judul) {
+      return res.status(400).json({
+        message: "Menu utama, nama submenu, dan judul halaman wajib diisi",
+      });
+    }
 
-  if (req.files?.length) {
-    for (const file of req.files) {
-      await db.query(
-        `
+    const finalSlug = slugify(slug || menu_label || judul);
+
+    await db.query(
+      `UPDATE menu_pages
+    SET parent_menu = ?, menu_label = ?, slug = ?, judul = ?, isi = ?, status_publish = ?, position = ?
+    WHERE id = ?`,
+      [
+        String(parent_menu).toUpperCase(),
+        menu_label,
+        slug,
+        judul,
+        isi || "", // <-- simpan teks pop-up ke kolom isi
+        status_publish || "Tampil",
+        Number(position || 1),
+        id,
+      ],
+    );
+
+    if (req.files?.length) {
+      for (const file of req.files) {
+        await db.query(
+          `
           INSERT INTO menu_page_files
           (page_id, nama_file, nama_asli, mime_type, ukuran)
           VALUES (?, ?, ?, ?, ?)
         `,
-        [pageId, file.filename, file.originalname, file.mimetype, file.size]
-      );
+          [id, file.filename, file.originalname, file.mimetype, file.size],
+        );
+      }
     }
-  }
 
-  res.status(201).json({ message: "Halaman menu berhasil ditambahkan", id: pageId });
-}));
+    res.json({ message: "Halaman menu berhasil diperbarui" });
+  }),
+);
 
-app.put("/api/admin/menu-pages/:id", requireAdmin, upload.array("berkas"), asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { parent_menu, menu_label, slug, judul, isi, status_publish, position } = req.body;
+app.delete(
+  "/api/admin/menu-pages/:id",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
 
-  if (!parent_menu || !menu_label || !judul) {
-    return res.status(400).json({ message: "Menu utama, nama submenu, dan judul halaman wajib diisi" });
-  }
+    const [files] = await db.query(
+      "SELECT nama_file FROM menu_page_files WHERE page_id = ?",
+      [id],
+    );
+    await db.query("DELETE FROM menu_pages WHERE id = ?", [id]);
+    files.forEach((file) => deleteUploadedFile(file.nama_file));
 
-  const finalSlug = slugify(slug || menu_label || judul);
+    res.json({ message: "Halaman menu berhasil dihapus" });
+  }),
+);
 
-  await db.query(
-    `
-      UPDATE menu_pages
-      SET parent_menu = ?, menu_label = ?, slug = ?, judul = ?, isi = ?, status_publish = ?, position = ?
-      WHERE id = ?
-    `,
-    [
-      String(parent_menu).toUpperCase(),
-      menu_label,
-      finalSlug,
-      judul,
-      isi || "",
-      status_publish || "Tampil",
-      Number(position || 1),
+app.delete(
+  "/api/admin/menu-pages/:id/files/:fileId",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { id, fileId } = req.params;
+    const [rows] = await db.query(
+      "SELECT nama_file FROM menu_page_files WHERE id = ? AND page_id = ? LIMIT 1",
+      [fileId, id],
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Berkas tidak ditemukan" });
+    }
+
+    deleteUploadedFile(rows[0].nama_file);
+    await db.query("DELETE FROM menu_page_files WHERE id = ? AND page_id = ?", [
+      fileId,
       id,
-    ]
-  );
-
-  if (req.files?.length) {
-    for (const file of req.files) {
-      await db.query(
-        `
-          INSERT INTO menu_page_files
-          (page_id, nama_file, nama_asli, mime_type, ukuran)
-          VALUES (?, ?, ?, ?, ?)
-        `,
-        [id, file.filename, file.originalname, file.mimetype, file.size]
-      );
-    }
-  }
-
-  res.json({ message: "Halaman menu berhasil diperbarui" });
-}));
-
-app.delete("/api/admin/menu-pages/:id", requireAdmin, asyncHandler(async (req, res) => {
-  const { id } = req.params;
-
-  const [files] = await db.query("SELECT nama_file FROM menu_page_files WHERE page_id = ?", [id]);
-  await db.query("DELETE FROM menu_pages WHERE id = ?", [id]);
-  files.forEach((file) => deleteUploadedFile(file.nama_file));
-
-  res.json({ message: "Halaman menu berhasil dihapus" });
-}));
-
-app.delete("/api/admin/menu-pages/:id/files/:fileId", requireAdmin, asyncHandler(async (req, res) => {
-  const { id, fileId } = req.params;
-  const [rows] = await db.query(
-    "SELECT nama_file FROM menu_page_files WHERE id = ? AND page_id = ? LIMIT 1",
-    [fileId, id]
-  );
-
-  if (rows.length === 0) {
-    return res.status(404).json({ message: "Berkas tidak ditemukan" });
-  }
-
-  deleteUploadedFile(rows[0].nama_file);
-  await db.query("DELETE FROM menu_page_files WHERE id = ? AND page_id = ?", [fileId, id]);
-  res.json({ message: "Berkas berhasil dihapus" });
-}));
+    ]);
+    res.json({ message: "Berkas berhasil dihapus" });
+  }),
+);
 
 /* =========================
    UBAH PASSWORD USER/ADMIN
 ========================= */
 
-app.put('/api/user/:id/password', requireAuth, asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { oldPassword, newPassword } = req.body;
+app.put(
+  "/api/user/:id/password",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { oldPassword, newPassword } = req.body;
 
-  if (Number(req.user.id) !== Number(id) && req.user.role !== "admin") {
-    return res.status(403).json({ message: "Tidak boleh mengubah password pengguna lain" });
-  }
+    if (Number(req.user.id) !== Number(id) && req.user.role !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Tidak boleh mengubah password pengguna lain" });
+    }
 
-  if (!oldPassword || !newPassword) {
-    return res.status(400).json({ message: 'Password lama dan password baru wajib diisi' });
-  }
+    if (!oldPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({ message: "Password lama dan password baru wajib diisi" });
+    }
 
-  const [rows] = await db.query('SELECT password FROM users WHERE id = ? LIMIT 1', [id]);
-  if (rows.length === 0) return res.status(404).json({ message: 'User tidak ditemukan' });
+    const [rows] = await db.query(
+      "SELECT password FROM users WHERE id = ? LIMIT 1",
+      [id],
+    );
+    if (rows.length === 0)
+      return res.status(404).json({ message: "User tidak ditemukan" });
 
-  const valid = await verifyPassword(oldPassword, rows[0].password);
-  if (!valid) return res.status(401).json({ message: 'Password lama salah' });
+    const valid = await verifyPassword(oldPassword, rows[0].password);
+    if (!valid) return res.status(401).json({ message: "Password lama salah" });
 
-  const hashedPassword = await hashPassword(newPassword);
-  await db.query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, id]);
+    const hashedPassword = await hashPassword(newPassword);
+    await db.query("UPDATE users SET password = ? WHERE id = ?", [
+      hashedPassword,
+      id,
+    ]);
 
-  res.json({ message: 'Password berhasil diubah' });
-}));
+    res.json({ message: "Password berhasil diubah" });
+  }),
+);
 
 /* =========================
    FRONTEND PRODUCTION
@@ -919,7 +1267,9 @@ app.use((req, res, next) => {
     return res.sendFile(indexPath);
   }
 
-  return res.status(404).send("Frontend belum di-build. Jalankan npm run build terlebih dahulu.");
+  return res
+    .status(404)
+    .send("Frontend belum di-build. Jalankan npm run build terlebih dahulu.");
 });
 
 app.use((error, req, res, next) => {
